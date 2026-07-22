@@ -16,65 +16,51 @@
   <script>
   (()=>{
     'use strict';
-    const BUILD='20260723-loader2';
+    const BUILD='20260723-categories1';
     const CHUNK_COUNT=6;
     const status=document.querySelector('#boot-status');
-
-    const setStatus=(message)=>{ if(status) status.textContent=message; };
-
+    const setStatus=(message)=>{if(status)status.textContent=message};
     async function fetchChunk(number,attempt){
       const controller=new AbortController();
       const timeout=setTimeout(()=>controller.abort(),12000);
       try{
         const url=`payload-${number}.js?v=${BUILD}&attempt=${attempt}&t=${Date.now()}`;
         const response=await fetch(url,{cache:'no-store',signal:controller.signal});
-        if(!response.ok) throw new Error(`データ${number}の取得に失敗しました（${response.status}）`);
+        if(!response.ok)throw new Error(`データ${number}の取得に失敗しました（${response.status}）`);
         const text=await response.text();
         const match=text.match(/window\.MUNAKATA_CHUNKS=\(window\.MUNAKATA_CHUNKS\|\|\[\]\);window\.MUNAKATA_CHUNKS\.push\("([A-Za-z0-9+/=]+)"\);\s*$/);
-        if(!match) throw new Error(`データ${number}の形式が正しくありません`);
+        if(!match)throw new Error(`データ${number}の形式が正しくありません`);
         return match[1];
-      } finally {
-        clearTimeout(timeout);
-      }
+      }finally{clearTimeout(timeout)}
     }
-
+    function enhance(html){
+      const style='<link rel="stylesheet" href="highlights.css?v='+BUILD+'">';
+      const script='<script src="highlights.js?v='+BUILD+'" defer><\/script>';
+      return html.replace('</head>',style+'</head>').replace('</body>',script+'</body>');
+    }
     async function unpack(attempt){
-      if(!('DecompressionStream' in globalThis)){
-        throw new Error('このSafariでは展開機能を利用できません。iPadOSを更新してください。');
-      }
+      if(!('DecompressionStream'in globalThis))throw new Error('このSafariでは展開機能を利用できません。iPadOSを更新してください。');
       setStatus(attempt===0?'アプリデータを読み込み中…':'キャッシュを使わず再試行中…');
       const chunks=await Promise.all(Array.from({length:CHUNK_COUNT},(_,index)=>fetchChunk(index+1,attempt)));
       const payload=chunks.join('');
-      if(!/^[A-Za-z0-9+/]+={0,2}$/.test(payload)) throw new Error('アプリデータに不正な文字が含まれています');
-      if(payload.length%4!==0) throw new Error('アプリデータの長さが正しくありません');
+      if(!/^[A-Za-z0-9+/]+={0,2}$/.test(payload))throw new Error('アプリデータに不正な文字が含まれています');
+      if(payload.length%4!==0)throw new Error('アプリデータの長さが正しくありません');
       const binary=atob(payload);
       const bytes=Uint8Array.from(binary,character=>character.charCodeAt(0));
       const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
       const html=await new Response(stream).text();
-      if(!/^\s*<!doctype html>/i.test(html)||!html.includes('<html')) throw new Error('展開後のアプリデータが正しくありません');
-      return html;
+      if(!/^\s*<!doctype html>/i.test(html)||!html.includes('<html'))throw new Error('展開後のアプリデータが正しくありません');
+      return enhance(html);
     }
-
     function showError(error){
       const message=error&&error.name==='AbortError'?'読み込みが時間切れになりました。通信を確認して再試行してください。':(error?.message||'不明なエラーが発生しました。');
       document.querySelector('#boot').innerHTML=`<section style="max-width:36rem;padding:2rem;text-align:center"><h1 style="font-size:1.5rem">読み込みに失敗しました</h1><p>${message}</p><div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap"><button id="retry-button" style="font:inherit;padding:.7rem 1rem;border:0;border-radius:999px;background:#0f766e;color:white">キャッシュを無視して再試行</button><button onclick="location.reload()" style="font:inherit;padding:.7rem 1rem;border:1px solid #8ba6a2;border-radius:999px;background:white;color:#15302d">ページを再読み込み</button></div></section>`;
       document.querySelector('#retry-button')?.addEventListener('click',()=>location.replace(`${location.pathname}?recover=${Date.now()}`));
       console.error(error);
     }
-
     (async()=>{
-      try{
-        const html=await unpack(0);
-        document.open();document.write(html);document.close();
-      }catch(firstError){
-        console.warn('初回読み込みに失敗したため再試行します',firstError);
-        try{
-          const html=await unpack(1);
-          document.open();document.write(html);document.close();
-        }catch(secondError){
-          showError(secondError);
-        }
-      }
+      try{const html=await unpack(0);document.open();document.write(html);document.close()}
+      catch(firstError){console.warn('初回読み込みに失敗したため再試行します',firstError);try{const html=await unpack(1);document.open();document.write(html);document.close()}catch(secondError){showError(secondError)}}
     })();
   })();
   </script>
