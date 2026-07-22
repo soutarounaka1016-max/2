@@ -2,6 +2,10 @@
 
 宗像市のニュース、イベント、防災、天気、交通への入口を一画面にまとめる地域情報Webアプリです。
 
+## 公開URL
+
+https://soutarounaka1016-max.github.io/munakata.now/
+
 ## 初版の機能
 
 - 今日知るべき3件
@@ -12,7 +16,7 @@
 - 防災、JR、ごみ、市役所への公式リンク
 - 記事の端末内保存（localStorage）
 - PWA用マニフェストとオフラインキャッシュ
-- 6時間ごとの情報更新ワークフロー
+- 6時間ごとの情報更新とGitHub Pagesへの自動再公開
 
 ## 情報の扱い
 
@@ -25,9 +29,7 @@
 - Playwright ChromiumでiPad横向き・スマートフォン表示を確認
 - 検索、保存、再読み込みを確認
 - 重大なJavaScriptエラーなし
+- 公開URLのHTTP 200と画面タイトルをGitHub Actionsで確認
+- 情報更新からGitHub Pages再公開まで実運転で確認
 
 詳細は `STATUS.md` を参照してください。
-
-## 公開
-
-GitHub Pages用のActionsワークフローを含んでいます。リポジトリ設定でPagesのSourceを **GitHub Actions** にすると、mainへの反映後に公開されます。
