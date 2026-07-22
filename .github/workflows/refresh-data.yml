@@ -59,11 +59,14 @@ jobs:
                   found.append((title, absolute, name))
               return found[:12]
 
-          path = Path('payload.js')
-          wrapper = path.read_text()
-          payload_match = re.search(r'MUNAKATA_PAYLOAD="([A-Za-z0-9+/=]+)"', wrapper)
-          if not payload_match: raise SystemExit('payload not found')
-          inner = gzip.decompress(base64.b64decode(payload_match.group(1))).decode()
+          paths = sorted(Path('.').glob('payload-*.js'))
+          chunks = []
+          for path in paths:
+              match = re.search(r'push\("([A-Za-z0-9+/=]+)"\)', path.read_text())
+              if not match: raise SystemExit(f'chunk not found: {path}')
+              chunks.append(match.group(1))
+          if len(chunks) != 6: raise SystemExit('unexpected chunk count')
+          inner = gzip.decompress(base64.b64decode(''.join(chunks))).decode()
           data_match = re.search(r'(<script id="munakata-data" type="application/json">\s*)(.*?)(\s*</script>)', inner, re.S)
           if not data_match: raise SystemExit('embedded data not found')
           data = json.loads(data_match.group(2))
@@ -93,8 +96,10 @@ jobs:
           new_data = data_match.group(1) + json.dumps(data, ensure_ascii=False, indent=2) + data_match.group(3)
           inner = inner[:data_match.start()] + new_data + inner[data_match.end():]
           payload = base64.b64encode(gzip.compress(inner.encode(), compresslevel=9, mtime=0)).decode()
-          wrapper = wrapper[:payload_match.start(1)] + payload + wrapper[payload_match.end(1):]
-          path.write_text(wrapper)
+          chunk_size = (len(payload) + len(paths) - 1) // len(paths)
+          for index, path in enumerate(paths):
+              chunk = payload[index * chunk_size:(index + 1) * chunk_size]
+              path.write_text(f'window.MUNAKATA_CHUNKS=(window.MUNAKATA_CHUNKS||[]);window.MUNAKATA_CHUNKS.push("{chunk}");\n')
           print(f'added={added}')
           PY
       - name: Commit update
@@ -105,6 +110,6 @@ jobs:
           fi
           git config user.name "munakata-now-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add payload.js
+          git add payload-*.js
           git commit -m "chore: refresh local information"
           git push
