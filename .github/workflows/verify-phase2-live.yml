@@ -1,0 +1,64 @@
+name: Verify Phase 2 live site
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: phase2-live-verification
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - name: Deploy current site
+        id: deployment
+        uses: actions/deploy-pages@v4
+      - name: Verify published Phase 2 features
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='${{ steps.deployment.outputs.page_url }}'
+          code=''
+          for attempt in {1..12}; do
+            code=$(curl -L --silent --show-error --output /tmp/live.html --write-out '%{http_code}' "$url" || true)
+            if [ "$code" = "200" ]; then
+              for file in payload-1.js payload-2.js payload-3.js payload-4.js payload-5.js payload-6.js; do
+                curl -L --silent --show-error "$url$file" >> /tmp/payloads.js
+              done
+              python - <<'PY'
+          import base64, gzip, re
+          text=open('/tmp/payloads.js').read()
+          chunks=re.findall(r'push\("([A-Za-z0-9+/=]+)"\)', text)
+          assert len(chunks)==6, len(chunks)
+          html=gzip.decompress(base64.b64decode(''.join(chunks))).decode()
+          assert 'イベントカレンダー' in html
+          assert '宗像の施設・会場マップ' in html
+          assert '新着のお知らせ' in html
+          assert 'priorityScore' in html
+          print('phase2-live-ok')
+          PY
+              printf 'url=%s\nhttp_status=%s\nphase2_features=success\n' "$url" "$code" > live-phase2.txt
+              exit 0
+            fi
+            sleep 5
+          done
+          printf 'url=%s\nhttp_status=%s\nphase2_features=failure\n' "$url" "$code" > live-phase2.txt
+          exit 1
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-phase2-verification
+          path: live-phase2.txt
