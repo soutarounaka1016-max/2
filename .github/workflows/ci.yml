@@ -32,9 +32,14 @@ jobs:
           assert data_match, 'embedded data not found'
           data = json.loads(data_match.group(1))
           assert len(data['news']) >= 8
-          assert len([x for x in data['news'] if x.get('priority')]) >= 3
+          assert len(data['events']) >= 5
+          assert len(data['discoveries']) >= 8
           assert len({x['id'] for x in data['news']}) == len(data['news'])
-          assert '30秒で、今日の宗像がわかる。' in html
+          assert len({x['id'] for x in data['discoveries']}) == len(data['discoveries'])
+          assert '宗像の「行ってみたい」が見つかる。' in html
+          assert '宗像の新しいもの' in html
+          assert 'funScore' in html
+          assert 'OpenStreetMap' in html
           assert 'localStorage' in html
-          print(f"OK: news={len(data['news'])}, events={len(data['events'])}")
+          print(f"OK: news={len(data['news'])}, events={len(data['events'])}, discoveries={len(data['discoveries'])}")
           PY
