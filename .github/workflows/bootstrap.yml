@@ -3,6 +3,8 @@ name: Bootstrap Munakata NOW
 on:
   push:
     branches: [feat/munakata-now-v1]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
