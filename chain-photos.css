@@ -1,0 +1,14 @@
+.chain-photo{position:relative;margin:-15px -15px 14px;aspect-ratio:16/10;overflow:hidden;border-radius:18px 18px 12px 12px;background:linear-gradient(135deg,#dff4ec,#eef5f3)}
+.chain-photo img,.chain-photo-fallback{position:absolute;inset:0;width:100%;height:100%}
+.chain-photo img{display:block;object-fit:cover;opacity:0;transform:scale(1.015);transition:opacity .25s ease,transform .4s ease}
+.chain-photo[data-loaded=true] img{opacity:1;transform:scale(1)}
+.chain-photo-fallback{display:grid;place-items:center;font-size:3.2rem;background:radial-gradient(circle at 28% 20%,rgba(255,255,255,.9),transparent 32%),linear-gradient(135deg,#dff4ec,#f6eeda)}
+.chain-photo-label{position:absolute;left:10px;top:10px;padding:.28rem .52rem;border-radius:999px;background:rgba(16,42,38,.78);color:#fff;font-size:.67rem;font-weight:800;backdrop-filter:blur(8px)}
+.chain-photo-credit{position:absolute;right:8px;bottom:7px;max-width:calc(100% - 16px);padding:.22rem .42rem;border-radius:7px;background:rgba(0,0,0,.62);font-size:.58rem;line-height:1.3}
+.chain-photo-credit a{color:#fff;text-decoration:none}
+.chain-photo-credit a:hover,.chain-photo-credit a:focus{text-decoration:underline}
+.chain-photo[data-failed=true] .chain-photo-credit{display:none}
+.chain-store-card .chain-photo{aspect-ratio:16/9;margin:-15px -15px 12px}
+.chain-compare-card .chain-photo{aspect-ratio:4/3;margin:-15px -15px 12px}
+@media(max-width:640px){.chain-photo{aspect-ratio:16/9}.chain-photo-credit{font-size:.54rem}.chain-photo-fallback{font-size:2.7rem}}
+@media(prefers-reduced-motion:reduce){.chain-photo img{transition:none}}
