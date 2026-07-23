@@ -8,12 +8,47 @@ const dateValue=value=>value?new Date(value+'T00:00:00+09:00').getTime():null;
 const daysFromToday=value=>value?Math.ceil((dateValue(value)-dateValue(todayText()))/dayMs):null;
 const daysLeft=value=>value?Math.ceil((new Date(value+'T23:59:59+09:00')-new Date())/dayMs):null;
 const el=(tag,className,text)=>{const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=text;return node};
+const googleMapsUrl=query=>`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${query} 福岡県宗像市`)}`;
+
+function mapQueryFromOsmUrl(href){
+  try{
+    const url=new URL(href,location.href);
+    if(!/(^|\.)openstreetmap\.org$/i.test(url.hostname))return'';
+    return url.searchParams.get('query')||url.searchParams.get('q')||'';
+  }catch{return'';}
+}
+
+function rewriteMapLinks(root=document){
+  const links=[];
+  if(root instanceof HTMLAnchorElement)links.push(root);
+  if(root.querySelectorAll)links.push(...root.querySelectorAll('a[href*="openstreetmap.org"]'));
+  links.forEach(link=>{
+    const query=mapQueryFromOsmUrl(link.href);
+    if(!query||link.dataset.mapFixed==='true')return;
+    link.href=googleMapsUrl(query);
+    link.dataset.mapFixed='true';
+    link.target='_blank';
+    link.rel='noopener noreferrer';
+    link.title=`Googleマップで「${query}」を開く`;
+    if(/地図|map/i.test(link.textContent||''))link.textContent='Googleマップで見る';
+  });
+}
+
+function watchMapLinks(){
+  rewriteMapLinks(document);
+  const observer=new MutationObserver(mutations=>{
+    mutations.forEach(mutation=>mutation.addedNodes.forEach(node=>{
+      if(node.nodeType===Node.ELEMENT_NODE)rewriteMapLinks(node);
+    }));
+  });
+  observer.observe(document.body,{childList:true,subtree:true});
+}
 
 function normalizedDiscoveries(list){
   return list.map(x=>({
     id:x.id,type:'new_store',title:x.title,place:x.area||x.region,summary:x.summary,
     startDate:x.openDate,endDate:x.expiresAt,region:x.region,emoji:x.emoji||icons.new_store,
-    url:x.url,verifiedByOfficial:!!x.verifiedByOfficial,
+    url:x.url,mapQuery:x.mapQuery||x.title,verifiedByOfficial:!!x.verifiedByOfficial,
     verificationLabel:x.verificationLabel||'情報源を確認'
   }));
 }
@@ -72,15 +107,24 @@ function makeCard(item){
   if(timing)meta.append(el('span','lh-chip '+(isUrgent(item)?'lh-ending':''),timing));
   card.append(meta);
   const actions=el('div','lh-actions');
+  const links=el('div','lh-action-links');
   const check=el('span','lh-check',item.verificationLabel||(item.verifiedByOfficial?'公式確認済み':'追加確認中'));
   if(item.url){
     const link=el('a','','詳しく見る');
     link.href=item.url;
     link.target='_blank';
     link.rel='noopener noreferrer';
-    actions.append(link);
+    links.append(link);
   }
-  actions.append(check);
+  if(item.mapQuery){
+    const map=el('a','','地図');
+    map.href=googleMapsUrl(item.mapQuery);
+    map.target='_blank';
+    map.rel='noopener noreferrer';
+    map.title=`Googleマップで「${item.mapQuery}」を開く`;
+    links.append(map);
+  }
+  actions.append(links,check);
   card.append(actions);
   return card;
 }
@@ -92,6 +136,7 @@ async function getJson(url){
 }
 
 async function init(){
+  watchMapLinks();
   const mount=el('section');
   mount.id='local-highlights';
   const wrap=el('div','lh-wrap');
@@ -155,6 +200,7 @@ async function init(){
     more.hidden=!(current==='all'&&selected.length>12);
     more.textContent=expanded?'表示を減らす':`もっと見る（残り${Math.max(0,selected.length-12)}件）`;
     [...tabs.children].forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.type===current)));
+    rewriteMapLinks(grid);
   }
 
   Object.entries(labels).forEach(([type,label])=>{
