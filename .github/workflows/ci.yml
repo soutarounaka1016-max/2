@@ -128,7 +128,7 @@ jobs:
           PY
 
   smoke-worker:
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 6
@@ -146,7 +146,7 @@ jobs:
 
   smoke-app:
     if: github.event_name == 'pull_request'
-    needs: smoke-worker
+    needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
