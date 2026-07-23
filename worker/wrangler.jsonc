@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "munakata-now-ai",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-23",
+  "ai": { "binding": "AI" },
+  "vars": {
+    "ALLOWED_ORIGIN": "https://soutarounaka1016-max.github.io"
+  }
+}
