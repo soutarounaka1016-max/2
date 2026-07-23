@@ -1,0 +1,27 @@
+name: Verify Photos
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Playwright WebKit
+        run: |
+          npm install --no-save playwright@1.54.1
+          npx playwright install --with-deps webkit
+      - name: Verify chain photos and AI controls in public app
+        env:
+          APP_URL: https://soutarounaka1016-max.github.io/munakata.now/
+          APP_SMOKE_ATTEMPTS: '24'
+          APP_SMOKE_DELAY_MS: '10000'
+        run: node scripts/smoke-app.mjs
